@@ -6,32 +6,53 @@ use serde::Deserialize;
 const CONFIG_ENV_VAR_NAME: &str = "GORG_CONFIG";
 const DEFAULT_CONFIG_DIRNAME: &str = "gorg";
 const DEFAULT_CONFIG_FILENAME: &str = "config.toml";
-const DEFAULT_PROJECT_DIR_NAME: &str = "Projects";
+const DEFAULT_PROJECT_DIR_NAME: &str = "projects";
 const DEFAULT_DB_FILE_NAME: &str = ".gorg-db";
 
 #[derive(Deserialize)]
 pub struct Config {
-    #[serde(default = "default_project_path")]
-    pub project_path: PathBuf,
+    #[serde(default = "default_projects_path")]
+    pub projects_path: PathBuf,
 
     #[serde(default = "default_db_path")]
     pub db_path: PathBuf,
+
+    #[serde(default = "default_max_find_items")]
+    pub max_find_items: usize,
+
+    #[serde(default = "default_git_command")]
+    pub git_command: String,
+
+    #[serde(default = "default_git_remote_name")]
+    pub git_remote_name: String,
 }
 
 fn home_dir() -> PathBuf {
-    std::env::home_dir().expect("Home dir should be defined for the user")
+    std::env::home_dir().expect("Home dir must be defined for the user")
 }
 
-fn default_project_path() -> PathBuf {
+fn default_projects_path() -> PathBuf {
     let mut path = home_dir();
     path.push(DEFAULT_PROJECT_DIR_NAME);
     path
 }
 
 fn default_db_path() -> PathBuf {
-    let mut path = default_project_path();
+    let mut path = default_projects_path();
     path.push(DEFAULT_DB_FILE_NAME);
     path
+}
+
+fn default_max_find_items() -> usize {
+    10
+}
+
+fn default_git_command() -> String {
+    String::from("git")
+}
+
+fn default_git_remote_name() -> String {
+    String::from("origin")
 }
 
 fn config_path() -> PathBuf {
@@ -54,8 +75,11 @@ fn config_path() -> PathBuf {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            project_path: default_project_path(),
+            projects_path: default_projects_path(),
             db_path: default_db_path(),
+            max_find_items: default_max_find_items(),
+            git_command: default_git_command(),
+            git_remote_name: default_git_remote_name(),
         }
     }
 }

@@ -25,26 +25,41 @@ impl Iterator for GitDirIterator {
             let Some(next_dir) = self.search_stack.pop() else {
                 return None;
             };
+
             let entries = match std::fs::read_dir(&next_dir) {
                 Ok(entries) => entries,
                 Err(err) => {
                     return Some(Err(err));
                 }
             };
-            for entry in entries {
+
+            let mut pushed_items = 0;
+            let mut result = None;
+            'entry: for entry in entries {
                 let entry = match entry {
                     Ok(entry) => entry,
                     Err(err) => {
-                        return Some(Err(err));
+                        result = Some(Err(err));
+                        break 'entry;
                     }
                 };
                 let path = entry.path();
                 if path.is_dir() && path.file_name() == Some(git_os_str) {
-                    return Some(Ok(next_dir));
+                    result = Some(Ok(next_dir));
+                    break 'entry;
                 }
                 if path.is_dir() {
+                    pushed_items += 1;
                     self.search_stack.push(path);
                 }
+            }
+
+            if result.is_some() {
+                if pushed_items > 0 {
+                    self.search_stack
+                        .truncate(self.search_stack.len() - pushed_items);
+                }
+                return result;
             }
         }
     }

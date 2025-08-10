@@ -1,5 +1,5 @@
 use crate::fuzzy;
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 
 pub struct DB {
     data: String,
@@ -9,10 +9,27 @@ pub struct DBView<'a> {
     lines: Vec<&'a str>,
 }
 
+impl Default for DB {
+    fn default() -> Self {
+        DB::empty()
+    }
+}
+
 impl DB {
-    pub fn load<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        let data = std::fs::read_to_string(path).context("failed to read config")?;
-        Ok(Self { data })
+    pub fn empty() -> Self {
+        Self {
+            data: String::new(),
+        }
+    }
+
+    pub fn load<P: AsRef<std::path::Path>>(path: P) -> Result<Option<Self>> {
+        match std::fs::read_to_string(path) {
+            Ok(data) => Ok(Some(Self { data })),
+            Err(err) => match err.kind() {
+                std::io::ErrorKind::NotFound => Ok(None),
+                _ => Err(err.into()),
+            },
+        }
     }
 
     pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
@@ -30,31 +47,40 @@ impl DB {
         Ok(())
     }
 
-    pub fn from_entries(entries: &mut [String]) -> Self {
-        entries.sort();
-        let mut data = String::with_capacity(entries.len() * 100);
-        for entry in entries.iter() {
+    pub fn from_entries<T: Iterator<Item = String>>(entries: T) -> Self {
+        let mut entries_vec = Vec::from_iter(entries);
+        entries_vec.sort();
+        let mut data = String::with_capacity(entries_vec.len() * 100);
+        for entry in entries_vec.iter() {
             data.push_str(entry);
             data.push('\n');
         }
         Self { data }
     }
 
-    pub fn find_matches(&self, input: &fuzzy::Keywords) -> impl Iterator<Item = &str> {
-        let is_empty = input.is_empty();
+    pub fn find_matches<'b>(&self, matcher: &'b str) -> impl Iterator<Item = &str> {
+        let is_empty = matcher.is_empty();
         self.data.split('\n').filter_map(move |a| {
+            if is_empty {
+                // If the matcher is not specified, we capture all results.
+                return Some(a);
+            }
             let a = a.trim();
             if a.is_empty() {
-                return None
+                return None;
             }
-            if is_empty {
-                return Some(a)
-            }
-            match input.score(a) {
+            match fuzzy::calc_score(matcher, a) {
                 0. => None,
                 _ => Some(a),
             }
         })
+    }
+
+    pub fn find_by_prefix<'b>(&self, prefix: &'b str) -> impl Iterator<Item = &str> {
+        let prefix_trimmed = prefix.trim();
+        self.data
+            .split('\n')
+            .filter(move |a| prefix_trimmed.is_empty() || a.trim().starts_with(prefix_trimmed))
     }
 
     pub fn view(&self) -> DBView {
@@ -64,14 +90,20 @@ impl DB {
 }
 
 impl<'a> DBView<'a> {
-    pub fn find_matches(&self, input: &fuzzy::Keywords, results: &mut Vec<(&'a str, f32)>) {
+    pub fn find_matches<'b>(&self, matcher: &'b str, results: &mut Vec<(&'a str, f32)>) {
         results.clear();
-        results.extend(self.lines.iter().filter_map(|a| match input.score(a) {
-            0. => None,
-            score => Some((*a, score)),
-        }));
+        results.extend(
+            self.lines
+                .iter()
+                .filter_map(|a| match fuzzy::calc_score(matcher, a) {
+                    0. => None,
+                    score => Some((*a, score)),
+                }),
+        );
         results.sort_by(|(_, score1), (_, score2)| {
-            score2.partial_cmp(score1).expect("Score comparison")
+            score2
+                .partial_cmp(score1)
+                .expect("Score comparison must be comparable")
         });
     }
 }
