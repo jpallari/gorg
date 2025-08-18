@@ -11,18 +11,23 @@ const DEFAULT_DB_FILE_NAME: &str = ".gorg-db";
 
 #[derive(Deserialize)]
 pub struct Config {
+    /// Path where all of the Git repositories will be placed
     #[serde(default = "default_projects_path")]
     pub projects_path: PathBuf,
 
-    #[serde(default = "default_db_path")]
-    pub db_path: PathBuf,
+    /// Path where the gorg index file will be stored
+    #[serde(default = "default_index_file_path")]
+    pub index_file_path: PathBuf,
 
+    /// Maximum number of items to list when finding projects interactively
     #[serde(default = "default_max_find_items")]
     pub max_find_items: usize,
 
+    /// Command to use for Git actions
     #[serde(default = "default_git_command")]
     pub git_command: String,
 
+    /// Name to use for the remote repository for new Git projects
     #[serde(default = "default_git_remote_name")]
     pub git_remote_name: String,
 }
@@ -37,7 +42,7 @@ fn default_projects_path() -> PathBuf {
     path
 }
 
-fn default_db_path() -> PathBuf {
+fn default_index_file_path() -> PathBuf {
     let mut path = default_projects_path();
     path.push(DEFAULT_DB_FILE_NAME);
     path
@@ -76,7 +81,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             projects_path: default_projects_path(),
-            db_path: default_db_path(),
+            index_file_path: default_index_file_path(),
             max_find_items: default_max_find_items(),
             git_command: default_git_command(),
             git_remote_name: default_git_remote_name(),

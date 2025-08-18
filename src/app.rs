@@ -82,18 +82,18 @@ impl App {
 
         log::debug!(
             "Saving project to DB {}",
-            self.cfg.db_path.to_string_lossy()
+            self.cfg.index_file_path.to_string_lossy()
         );
-        let mut db = DB::load(&self.cfg.db_path)?.unwrap_or_default();
+        let mut db = DB::load(&self.cfg.index_file_path)?.unwrap_or_default();
         db.add(&project_path.join("/"))?;
-        db.save(&self.cfg.db_path)?;
+        db.save(&self.cfg.index_file_path)?;
 
         Ok(ExitCode::SUCCESS)
     }
 
     fn load_db_or_fail(&self) -> Result<DB> {
-        let Some(db) = DB::load(&self.cfg.db_path)? else {
-            bail!("DB not found at {}", self.cfg.db_path.to_string_lossy());
+        let Some(db) = DB::load(&self.cfg.index_file_path)? else {
+            bail!("DB not found at {}", self.cfg.index_file_path.to_string_lossy());
         };
         Ok(db)
     }
@@ -291,7 +291,7 @@ impl App {
                 },
             );
         let db = DB::from_entries(iter);
-        db.save(&self.cfg.db_path)?;
+        db.save(&self.cfg.index_file_path)?;
         Ok(ExitCode::SUCCESS)
     }
 
