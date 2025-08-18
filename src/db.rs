@@ -83,7 +83,7 @@ impl DB {
             .filter(move |a| prefix_trimmed.is_empty() || a.trim().starts_with(prefix_trimmed))
     }
 
-    pub fn view(&self) -> DBView {
+    pub fn view<'a>(&'a self) -> DBView<'a> {
         let lines: Vec<&str> = self.data.split('\n').map(|a| a.trim()).collect();
         DBView { lines }
     }
