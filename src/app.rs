@@ -93,7 +93,10 @@ impl App {
 
     fn load_db_or_fail(&self) -> Result<DB> {
         let Some(db) = DB::load(&self.cfg.index_file_path)? else {
-            bail!("DB not found at {}", self.cfg.index_file_path.to_string_lossy());
+            bail!(
+                "DB not found at {}",
+                self.cfg.index_file_path.to_string_lossy()
+            );
         };
         Ok(db)
     }
@@ -227,8 +230,11 @@ impl App {
                 let ui_event = ui.handle_event(event?);
                 match ui_event {
                     Some(tui::PromptUIEvent::SelectionDone) => {
-                        selection = Some(ui.selected_item() as usize);
-                        break;
+                        let selected_item = ui.selected_item() as usize;
+                        if selected_item < results.len() {
+                            selection = Some(selected_item);
+                            break;
+                        }
                     }
                     Some(tui::PromptUIEvent::Exit) => break,
                     Some(tui::PromptUIEvent::PromptUpdated) => {
